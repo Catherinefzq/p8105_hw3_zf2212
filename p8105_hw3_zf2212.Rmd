@@ -28,15 +28,145 @@ brfss = brfss_smart2010 %>%
   filter(topic == "Overall Health") %>% # filter topic 
   filter(response %in% c("Excellent", "Very good", "Good", "Fair", "Poor"), !is.na("response")) %>% 
   # filter response from excellent to poor
-  mutate(response, as.factor(response)) %>% 
+  mutate(response, response = as.factor(response)) %>% 
   arrange(response) %>%  # mutate response as factor and arrange order
-  select()
-  
-
+  select(year, locationabbr, locationdesc, response, data_value, everything())
 ```
 
-Using this dataset, do or answer the following (commenting on the results of each):
+__1.1__
+
 In 2002, which states were observed at 7 locations?
+
+```{r observed 7}
+# filter the 2002 data
+brfss2002 = brfss %>% 
+  filter(year == 2002)
+# summarize the number of locations
+n_obs2002 = brfss2002 %>% 
+  group_by(locationabbr) %>% 
+  summarize(n_location = n_distinct(locationdesc)) 
+# find the state observed 7 location
+obs7 = n_obs2002 %>% 
+  filter(n_location == 7) 
+obs7[1]
+```
+
+There are three states were observed at 7 locations, including __CT, FL and NC.__
+
+__1.2__
+
 Make a “spaghetti plot” that shows the number of locations in each state from 2002 to 2010.
+
+```{r spaghetti plot}
+# arrange the data
+brfss_nloc = brfss %>%
+  group_by(year, locationabbr) %>% 
+  summarize(n_loc = n_distinct(locationdesc))
+# create the plot
+brfss_nloc %>% 
+  ggplot(aes(x = year, y = n_loc, color = locationabbr )) + 
+  geom_point(size = 0.8) +
+  geom_line(size = 0.5) +
+  labs(
+    title = "2002-2010 Number of Locations Observed in Each States",
+    x = "Year",
+    y = "Number of Locations",
+    caption = "Data from the p8105.datasets") + 
+  scale_color_hue(name = "States") +
+  theme_bw() +
+  theme(legend.position = "bottom", plot.title = element_text(hjust = 0.5)) +
+  guides(col = guide_legend(nrow = 3))
+```
+
+__1.3__
+
 Make a table showing, for the years 2002, 2006, and 2010, the mean and standard deviation of the proportion of “Excellent” responses across locations in NY State.
-For each year and state, compute the average proportion in each response category (taking the average across locations in a state). Make a five-panel plot that shows, for each response category separately, the distribution of these state-level averages over time.
+
+```{r table for ny} 
+# filter ny data
+brfss_ny = brfss %>% 
+  filter(year == 2002 | year == 2006 | year == 2010, locationabbr == "NY", response == "Excellent")  %>% 
+  select(year, locationabbr, locationdesc, response, data_value) %>% 
+  spread(key = "response", value = "data_value") %>% 
+  group_by(year) %>% # group data by year
+  janitor::clean_names()  %>% 
+  summarize(excellent_mean = mean(excellent, na.rm = TRUE), 
+            excellent_sd = sd(excellent, na.rm = TRUE)) # summarize mean and sd
+brfss_ny 
+```
+
+__1.4__
+
+For each year and state, compute the average proportion in each response category (taking the average across locations in a state). Make a five-panel plot that shows, for each response category separately, the distribution of these state-level averages over time. 
+(five-panel plot -  facet_grid() )
+```{r five panel plot}
+# arrange the data 
+brfss_average = brfss %>% 
+  group_by(year, locationabbr) %>% 
+  select(year, locationabbr, locationdesc, response, data_value) %>% 
+  spread(key = "response", value = "data_value") %>% 
+  janitor::clean_names() %>% # compute the average proportion
+  summarize(excellent_average = mean(excellent, na.rm = TRUE),
+            fair_average = mean(fair, na.rm = TRUE),
+            good_average = mean(good, na.rm = TRUE),
+            poor_average = mean(poor, na.rm = TRUE),
+            very_good_ave = mean(very_good, na.rm = TRUE)) 
+brfss_average
+
+# arrange data for the plot
+average_plot = 
+  brfss_average %>% 
+  group_by(year, locationabbr) %>% 
+  gather(key = "response", value = "propotion", excellent_average:very_good_ave)
+
+# set up a lookup table for the plot
+fivepanel = c(excellent_average = "Excellent",
+              fair_average = "Fair",
+              good_average = "Good",
+              poor_average = "Poor",
+              very_good_ave = "Very Good")
+
+# make fivepanel plot
+average_plot %>% 
+ggplot(aes(x = year , y = propotion ,color = locationabbr)) +
+  geom_point(size = 0.5) + 
+  geom_line(size = 0.3) +
+  facet_grid(~response, labeller = labeller(response = fivepanel)) +
+  labs(
+    title = "2002-2010 Distribution of Response Proportion Mean at State-level",
+    x = "Year",
+    y = "Response Proportiaon Mean",
+    caption = "Data from the p8105.datasets") + 
+  scale_color_hue(name = "States") +
+  theme_bw() +
+  theme(legend.position = "bottom", plot.title = element_text(hjust=0.5)) +
+  guides(col = guide_legend(nrow = 3))
+```
+
+!!! the rmk knit gglots looks wired. 
+
+
+
+## Problem 2
+This problem uses the Instacart data. DO NOT include this dataset in your local data directory; instead, load the data from the  p8105.datasets package (it’s called instacart).
+(there is a column order_dow which I assume is our day of the week column. It is coded from 0-6. Are we to assume 0 is sunday, you should be clear about that in your description of the data!) 
+
+The goal is to do some exploration of this dataset. To that end, write a short description of the dataset, noting the size and structure of the data, describing some key variables, and giving illstrative examples of observations. Then, do or answer the following (commenting on the results of each):
+
+How many aisles are there, and which aisles are the most items ordered from?
+Make a plot that shows the number of items ordered in each aisle. Order aisles sensibly, and organize your plot so others can read it. (google around to see if there are other options for x-axis text that will make the figure more readable, or consider other options to include that information.)
+Make a table showing the most popular item in each of the aisles “baking ingredients”, “dog food care”, and “packaged vegetables fruits”. -- one table, showing one item from each of these three aisles.
+
+
+Make a table showing the mean hour of the day at which Pink Lady Apples and Coffee Ice Cream are ordered on each day of the week; format this table for human readers (i.e. produce a 2 x 7 table).
+
+
+## Problem 3
+This problem uses the NY NOAA data. DO NOT include this dataset in your local data directory; instead, load the data from the  p8105.datasets package (it’s called ny_noaa).
+
+The goal is to do some exploration of this dataset. To that end, write a short description of the dataset, noting the size and structure of the data, describing some key variables, and indicating the extent to which missing data is an issue.  (obtain proportions of the missing values by column and comment about the degree to which the data is missing, maybe connect to the background of the data)
+Then, do or answer the following (commenting on the results of each):
+
+Do some data cleaning. Create separate variables for year, month, and day. Ensure observations for temperature, precipitation, and snowfall are given in reasonable units. For snowfall, what are the most commonly observed values? Why?
+Make a two-panel plot showing the average max temperature in January and in July in each station across years. Is there any observable / interpretable structure? Any outliers?
+Make a two-panel plot showing (i) tmax vs tmin for the full dataset (note that a scatterplot may not be the best option); (using geom_hex, we see how densities of tmin/tmax combinations; when using geom_smooth, we see more of the relationship between tmin and tmax. / error geom_hex:downloaded the package hexbin)and (ii) make a plot showing the distribution of snowfall values greater than 0 and less than 100 separately by year.
