@@ -8,6 +8,7 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(
   fig.width = 10,
+  fig.height = 15,
   fig.asp = .6,
   out.width = "90%"
 )
@@ -34,7 +35,7 @@ brfss = brfss_smart2010 %>%
   select(year, locationabbr, locationdesc, response, data_value, everything())
 ```
 
-__1.1__
+### 1.1
 
 In 2002, which states were observed at 7 locations?
 
@@ -54,7 +55,7 @@ obs7[1]
 
 There are three states were observed at 7 locations, including __CT, FL and NC.__
 
-__1.2__
+### 1.2
 
 Make a “spaghetti plot” that shows the number of locations in each state from 2002 to 2010.
 
@@ -79,7 +80,7 @@ brfss_nloc %>%
   guides(col = guide_legend(nrow = 3))
 ```
 
-__1.3__
+### 1.3
 
 Make a table showing, for the years 2002, 2006, and 2010, the mean and standard deviation of the proportion of “Excellent” responses across locations in NY State.
 
@@ -96,7 +97,7 @@ brfss_ny = brfss %>%
 brfss_ny 
 ```
 
-__1.4__
+### 1.4
 
 For each year and state, compute the average proportion in each response category (taking the average across locations in a state). Make a five-panel plot that shows, for each response category separately, the distribution of these state-level averages over time. 
 (five-panel plot -  facet_grid() )
@@ -147,7 +148,7 @@ ggplot(aes(x = year , y = propotion, color = locationabbr)) +
 
 ## Problem 2 Instacart
 
-__2.1__
+### 2.1
 
 Write a short description of the dataset, noting the size and structure of the data, describing some key variables, and giving illstrative examples of observations.
 
@@ -179,7 +180,7 @@ In __reordered__, 1 represent this prodcut has been ordered by this user in the 
 
 In **order_dow**, the numbers in the column show the day of the week on which the order was placed. As information about the start day of the week is not shown, we assume the first day of the week is Sunday, which means 0 represents Sunday. 
 
-__2.2__ (comment on each result)
+### 2.2
 
 How many aisles are there, and which aisles are the most items ordered from?
 
@@ -198,7 +199,7 @@ aisles_data[1,1]
 
 There are __`r n_aisles`__ aisles and __`r aisles_data[1,1]`__ is the aisle which the most items ordered from.
 
-__2.3__
+### 2.3
 
 Make a plot that shows the number of items ordered in each aisle. Order aisles sensibly, and organize your plot so others can read it. 
 
@@ -225,7 +226,7 @@ aisles_plot %>%
 
 As the number of each item range from 287 to 150609, which is very big, I break the Number of Items manually to make it clear. Also, differentiate each aisle by color. Instead of keeping the legend, I hided it and flip the x and y axis, which creats more space for the name of each aisle. It is easier to look compared to check the legend. By reordering the bars, max and min value are easy to read.
 
-__2.4__
+### 2.4
 
 Make a table showing the most popular item in each of the aisles “baking ingredients”, “dog food care”, and “packaged vegetables fruits”. -- one table, showing one item from each of these three aisles.
 
@@ -257,7 +258,7 @@ The most popular item in dog food care is __Snack Sticks Chicken & Rice Recipe D
 
 The most popular item in packaged vegetables fruits is __Organic Baby Spinach__.
 
-__2.5__
+### 2.5
 
 Make a table showing the mean hour of the day at which Pink Lady Apples and Coffee Ice Cream are ordered on each day of the week. 
 
@@ -270,10 +271,10 @@ placic = instacart %>%
   spread(key = order_dow, value = hr_mean)
 placic
 ```
-The table shows the mean hour of the day Pink Lady Apples and Coffee Ice Cream are ordered on each day of week. We can see that Ice Cream were most ordered later than Apples in most of the days. However, as mean is greatly affected by extreme value, we need more analysis to draw the conclusion.
+The table shows the mean hour of the day Pink Lady Apples and Coffee Ice Cream are ordered on each day of week. We can see that __Ice Cream were most ordered later than Apples in most of the days__. However, as mean is greatly affected by extreme value, we need more analysis to draw the conclusion.
 
 ## Problem 3 NY NOAA
-__3.1__
+### 3.1
 
 Write a short description of the dataset, noting the size and structure of the data, describing some key variables, and indicating the extent to which missing data is an issue.
 
@@ -302,8 +303,7 @@ The dataset originally comes from _NOAA National Climatic Data Center_. The vers
 
 The variables include information of __`r names(ny_noaa)`__. The __proportion of missing value__ in each column is shown in the table above. As each weather station may collect only a subset of these variables, the resulting dataset contains extensive missing data. The __Maximum temperature and Minimum temperature__ hold the highest proportion of missing value, which are almost half of the observations in each column. Meanwhile, __Precipitation__ has a lower proportion of missing values compared to others. The big __difference of proportion__ (0.056 vs. 0.437) is a big issue. 
 
-__3.2__
- (commenting on the results of each):
+### 3.2
 
 Do some data cleaning. Create separate variables for year, month, and day. Ensure observations for temperature, precipitation, and snowfall are given in reasonable units. For snowfall, what are the most commonly observed values? Why?
 
@@ -325,7 +325,7 @@ getmode(nynoaa_clean$snow)
 
 The most commonly observed values in snowfall is __0__. Because snowfall happens in Winter days, most of the time in a year will have 0 snowfall.
 
-__3.3__
+### 3.3
 
 Make a two-panel plot showing the average max temperature in January and in July in each station across years. Is there any observable / interpretable structure? Any outliers?
 
@@ -355,7 +355,7 @@ In the plot, we can see that the most of the average max temperature in January 
 
 There are some outliners stations in both months. For example, there are one in __January 1982__ and one in __July 1988__.
 
-__3.4__
+### 3.4
 
 Make a two-panel plot showing 
 
