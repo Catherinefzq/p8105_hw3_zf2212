@@ -13,6 +13,7 @@ knitr::opts_chunk$set(
 )
 library(tidyverse)
 library(p8105.datasets)
+library(patchwork)
 ```
 
 ## Problem 1 BRFSS
@@ -172,7 +173,7 @@ The dataset originally comes from _instacart.com_. The version we used for this 
 
 The variables include information of `r names(instacart)`. There are no missing value in each column. 
 
-For the following analysis, the variables of interest includes??? (order_id, product_id, reordered, user_id, order_number) as they are some key information for us to figure out the shopping behaviors of the users in _Instacart_. 
+For the following analysis, the variables of interest includes __aisle, product_name and department__ as they are some key information for us to figure out the shopping behaviors of the users in _Instacart_. 
 
 In __reordered__, 1 represent this prodcut has been ordered by this user in the past and 0 represents it was not ordered before. For example, for _order#1_, four out of eight products were reordered products. 
 
@@ -206,22 +207,23 @@ Make a plot that shows the number of items ordered in each aisle. Order aisles s
 aisles_plot = instacart %>% 
   select(aisle_id, aisle) %>% 
   group_by(aisle) %>% 
-  summarize(items_n = n()) %>% 
-  mutate(items_n, items_n = items_n/1000) 
+  summarize(items_n = n())
+  
 # make the plot
 aisles_plot %>% 
-  ggplot(aes(x = aisle, y = items_n, color = aisle)) + # set the axis
-  geom_point(aes(size = items_n)) + 
+  ggplot(aes(x = reorder(aisle, -items_n), y = items_n, fill = aisle)) + # set the axis
+  geom_bar(stat = "identity") + 
   labs(title = "The Number of Items in Each Aisle",
        x = "Aisle",
-       y = "Number of Items (x1000)",
-       caption = "The size of point reflects the number of items in each aisle.") +
-  #scale_x_discrete(expand = expand_scale(add = 4)) +
+       y = "Number of Items",
+       caption = "Data from instacart.com") + 
+  coord_flip() + # flip x and y
+  scale_y_continuous(breaks = c(0,5000,10000,75000,100000,150000), expand = c(0, 1000)) + # reset the breaks
   theme_bw() +
-  theme(text = element_text(size = 10), plot.title = element_text(hjust = 0.5), legend.position = "hide", axis.text.x = element_text(angle = 90, hjust = 1)) 
+  theme(text = element_text(size = 6), plot.title = element_text(hjust = 0.5), legend.position = "hide", title = element_text(size = 10, face = 'bold')) # set theme
 ```
 
-As the number of each item range from 287 to 150609, the number was divided by 1000 in order to make the plot looks clear. Also, differentiate the number by the size of point make it more easy to notice the aisle with large nubmer. 
+As the number of each item range from 287 to 150609, which is very big, I break the Number of Items manually to make it clear. Also, differentiate each aisle by color. Instead of keeping the legend, I hided it and flip the x and y axis, which creats more space for the name of each aisle. It is easier to look compared to check the legend. By reordering the bars, max and min value are easy to read.
 
 __2.4__
 
@@ -256,20 +258,141 @@ The most popular item in dog food care is __Snack Sticks Chicken & Rice Recipe D
 The most popular item in packaged vegetables fruits is __Organic Baby Spinach__.
 
 __2.5__
-Make a table showing the mean hour of the day at which Pink Lady Apples and Coffee Ice Cream are ordered on each day of the week; format this table for human readers (i.e. produce a 2 x 7 table).
 
+Make a table showing the mean hour of the day at which Pink Lady Apples and Coffee Ice Cream are ordered on each day of the week. 
+
+```{r apple and ice cream}
+placic = instacart %>% 
+  filter(product_name == "Pink Lady Apples" | product_name == "Coffee Ice Cream") %>% 
+  group_by(product_name, order_dow) %>% 
+  select(product_name, order_dow, order_hour_of_day) %>% 
+  summarize(hr_mean = round(mean(order_hour_of_day), digits = 3)) %>% 
+  spread(key = order_dow, value = hr_mean)
+placic
+```
+The table shows the mean hour of the day Pink Lady Apples and Coffee Ice Cream are ordered on each day of week. We can see that Ice Cream were most ordered later than Apples in most of the days. However, as mean is greatly affected by extreme value, we need more analysis to draw the conclusion.
 
 ## Problem 3 NY NOAA
-This problem uses the NY NOAA data. DO NOT include this dataset in your local data directory; instead, load the data from the  p8105.datasets package (it’s called ny_noaa).
+__3.1__
 
-```{r}
+Write a short description of the dataset, noting the size and structure of the data, describing some key variables, and indicating the extent to which missing data is an issue.
+
+```{r noaa description}
 data(ny_noaa)
-
+ny_noaa %>% 
+  janitor::clean_names()
+# decribe data
+names(ny_noaa) # variables name
+dim(ny_noaa) # size
+dis_id = nrow(distinct(ny_noaa, id)) # distinct id
+head(ny_noaa, 5) 
+tail(ny_noaa, 5)
+skimr::skim(ny_noaa) # look at the data
+# obtain the proportion of missing value
+tb_miss = ny_noaa %>%
+  summarize(prcp_na = sum(is.na(prcp))/n(),
+            snow_na = sum(is.na(snow))/n(),
+            snwd_na = sum(is.na(snwd))/n(),
+            tmax_na = sum(is.na(tmax))/n(),
+            tmin_na = sum(is.na(tmin))/n())
+tb_miss
 ```
 
-The goal is to do some exploration of this dataset. To that end, write a short description of the dataset, noting the size and structure of the data, describing some key variables, and indicating the extent to which missing data is an issue.  (obtain proportions of the missing values by column and comment about the degree to which the data is missing, maybe connect to the background of the data)
-Then, do or answer the following (commenting on the results of each):
+The dataset originally comes from _NOAA National Climatic Data Center_. The version we used for this analysis is cleaned version from p8105.datasets. There are __`r dim(ny_noaa)` (observations, variables)__ in the dataset. It includes five core variables for all New York state weather stations from January 1, 1981 through December 31, 2010. There are `r dis_id` distinct Weather stations. 
+
+The variables include information of __`r names(ny_noaa)`__. The __proportion of missing value__ in each column is shown in the table above. As each weather station may collect only a subset of these variables, the resulting dataset contains extensive missing data. The __Maximum temperature and Minimum temperature__ hold the highest proportion of missing value, which are almost half of the observations in each column. Meanwhile, __Precipitation__ has a lower proportion of missing values compared to others. The big __difference of proportion__ (0.056 vs. 0.437) is a big issue. 
+
+__3.2__
+ (commenting on the results of each):
 
 Do some data cleaning. Create separate variables for year, month, and day. Ensure observations for temperature, precipitation, and snowfall are given in reasonable units. For snowfall, what are the most commonly observed values? Why?
+
+```{r clean, creat new observations}
+# clean the data
+nynoaa_clean = ny_noaa %>% 
+  separate(date, into = c("year", "month", "day"), sep = "-") %>% 
+  mutate(month, month = as.numeric(month)) %>% # separate dat
+  mutate(prcp = prcp / 10,
+         tmax = as.numeric(tmax) / 10,
+         tmin = as.numeric(tmin) / 10) # adjust units 
+# function for mode
+getmode = function(x) {
+  ux = unique(x)
+  ux[which.max(tabulate(match(x, ux)))]}
+
+getmode(nynoaa_clean$snow)
+```
+
+The most commonly observed values in snowfall is __0__. Because snowfall happens in Winter days, most of the time in a year will have 0 snowfall.
+
+__3.3__
+
 Make a two-panel plot showing the average max temperature in January and in July in each station across years. Is there any observable / interpretable structure? Any outliers?
-Make a two-panel plot showing (i) tmax vs tmin for the full dataset (note that a scatterplot may not be the best option); (using geom_hex, we see how densities of tmin/tmax combinations; when using geom_smooth, we see more of the relationship between tmin and tmax. / error geom_hex:downloaded the package hexbin)and (ii) make a plot showing the distribution of snowfall values greater than 0 and less than 100 separately by year.
+
+```{r twoplot}
+# arrange the data
+tmax_meantb = nynoaa_clean %>% 
+  filter(month == 01 | month == 07) %>% 
+  group_by(id, year, month) %>% 
+  summarize(mean_tmax = round(mean(tmax, na.rm = TRUE), digits = 3))
+# creat the labeller
+month_lab = c('1' = "January", '7' = "July")
+# make the plot
+tmax_meantb %>% 
+  ggplot(aes(x = year, y = mean_tmax, group = id, color = id)) + 
+  geom_point(size = 0.5) + 
+  geom_line(size = 0.3, alpha = 0.6) + 
+  facet_grid(~month, labeller = labeller(month = month_lab)) +
+  theme_bw() +
+  theme(axis.text.x = element_text(size = 5, angle = 90), legend.position = "hide", plot.title = element_text(hjust = 0.5)) +
+  labs(title = "1981-2010 Average Max Temperature in January and July in Each Station ",
+       x = "Year",
+       y = "Average Max Temperature (˚C)",
+       caption = "Data from NOAA National Climatic Data Center") 
+```
+
+In the plot, we can see that the most of the average max temperature in January are __from -10˚C to 10˚C__ in each station across years and in July are __from 20˚C to 35˚C__. However, in both months, the __changes were flutant__ from 1981-2010. We can see the lines goes up and down. From __July 2009 to July 2010__, there is a siginificant growth, which may reflect the abnormal changes in climate. As mean is affected by extreme value, more analyses are needed. 
+
+There are some outliners stations in both months. For example, there are one in __January 1982__ and one in __July 1988__.
+
+__3.4__
+
+Make a two-panel plot showing 
+
+(i) tmax vs tmin for the full dataset (note that a scatterplot may not be the best option)
+
+(ii) make a plot showing the distribution of snowfall values greater than 0 and less than 100 separately by year.
+
+```{r two panel plot}
+# make the plot 1
+p1 =  nynoaa_clean %>% 
+  ggplot(aes(x = tmax, y = tmin)) + 
+  geom_hex() + 
+  theme_bw() +
+  theme(legend.position = "bottom", plot.title = element_text(size = 6, hjust = 0.5), legend.text = element_text(size = 3)) +
+  labs(
+    title = "1981-2010 The Comparison of Max Temperature and Min Temperature in Each Station",
+    x = "Maximum Temperature(˚C)",
+    y = "Minimum Temperature(˚C)")
+# make the plot 2
+p2 = nynoaa_clean %>% 
+  group_by(year) %>% 
+  mutate(range = snow > 0 & snow < 100) %>% 
+  filter(range == TRUE, !is.na(range)) %>% 
+  select(id, year, snow) %>% 
+  ggplot(aes(x = snow, fill = year)) + 
+  geom_density(alpha = 0.3) +
+  theme_bw() +
+  theme(legend.position = "hide", plot.title = element_text(hjust = 0.5, size = 6)) +
+  labs(
+    title = "The Density Distribution of Snowfall in Each Year (> 0mm & < 100mm)",
+    x = "Snow Fall (mm)",
+    y = "Density",
+    caption = "Data from NOAA National Climatic Data Center")
+# combine the two plot
+twopanel = p1 + p2
+twopanel
+```
+
+From the plots above, we can see that in most of the stations, max and min temperature are between -10˚C to 25˚C. There are small amount of snow fall observed in these stations as the density of snow fall between 0 to 25mm are high.
+
