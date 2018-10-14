@@ -7,11 +7,12 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(
-  fig.width = 6,
+  fig.width = 10,
   fig.asp = .6,
   out.width = "90%"
 )
 library(tidyverse)
+library(p8105.datasets)
 ```
 
 ## Problem 1 BRFSS
@@ -20,9 +21,8 @@ First, do some data cleaning:
 
 ```{r import and tidy data}
 # import
-library(p8105.datasets)
 data("brfss_smart2010")
-
+# clean
 brfss = brfss_smart2010 %>% 
   janitor::clean_names() %>% # use appropriate variable names
   filter(topic == "Overall Health") %>% # filter topic 
@@ -71,10 +71,10 @@ brfss_nloc %>%
     title = "2002-2010 Number of Locations Observed in Each States",
     x = "Year",
     y = "Number of Locations",
-    caption = "Data from the p8105.datasets") + 
+    caption = "Data from the data.gov") + 
   scale_color_hue(name = "States") +
   theme_bw() +
-  theme(legend.position = "bottom", plot.title = element_text(hjust = 0.5)) +
+  theme(legend.position = "bottom", plot.title = element_text(hjust = 0.5), legend.text = element_text(size = 7)) +
   guides(col = guide_legend(nrow = 3))
 ```
 
@@ -128,7 +128,7 @@ fivepanel = c(excellent_average = "Excellent",
 
 # make fivepanel plot
 average_plot %>% 
-ggplot(aes(x = year , y = propotion ,color = locationabbr)) +
+ggplot(aes(x = year , y = propotion, color = locationabbr)) +
   geom_point(size = 0.5) + 
   geom_line(size = 0.3) +
   facet_grid(~response, labeller = labeller(response = fivepanel)) +
@@ -136,33 +136,136 @@ ggplot(aes(x = year , y = propotion ,color = locationabbr)) +
     title = "2002-2010 Distribution of Response Proportion Mean at State-level",
     x = "Year",
     y = "Response Proportiaon Mean",
-    caption = "Data from the p8105.datasets") + 
+    caption = "Data from data.gov") + 
   scale_color_hue(name = "States") +
   theme_bw() +
-  theme(legend.position = "bottom", plot.title = element_text(hjust=0.5)) +
+  theme(legend.position = "bottom", plot.title = element_text(hjust=0.5), legend.text = element_text(size = 7)) +
   guides(col = guide_legend(nrow = 3))
 ```
 
-!!! the rmk knit gglots looks wired. 
 
+## Problem 2 Instacart
 
+__2.1__
 
-## Problem 2
-This problem uses the Instacart data. DO NOT include this dataset in your local data directory; instead, load the data from the  p8105.datasets package (it’s called instacart).
-(there is a column order_dow which I assume is our day of the week column. It is coded from 0-6. Are we to assume 0 is sunday, you should be clear about that in your description of the data!) 
+Write a short description of the dataset, noting the size and structure of the data, describing some key variables, and giving illstrative examples of observations.
 
-The goal is to do some exploration of this dataset. To that end, write a short description of the dataset, noting the size and structure of the data, describing some key variables, and giving illstrative examples of observations. Then, do or answer the following (commenting on the results of each):
+```{r describe data}
+# import and clean
+data("instacart")
+instacart %>% 
+  janitor::clean_names()
+# decribe data
+names(instacart) # variables name
+dim(instacart) # size
+head(instacart, 5) 
+tail(instacart, 5)
+skimr::skim(instacart) # look at the data
+instacart %>% # find unique users numbers
+  distinct(user_id) %>% 
+  nrow()
+```
+
+__Description__
+
+The dataset originally comes from _instacart.com_. The version we used for this analysis is cleaned version from p8105.datasets. There are `r dim(instacart)` (observations, variables) in the dataset. Each row in the dataset is a product from an order and a single order per user. There are 131,209 unique users. 
+
+The variables include information of `r names(instacart)`. There are no missing value in each column. 
+
+For the following analysis, the variables of interest includes??? (order_id, product_id, reordered, user_id, order_number) as they are some key information for us to figure out the shopping behaviors of the users in _Instacart_. 
+
+In __reordered__, 1 represent this prodcut has been ordered by this user in the past and 0 represents it was not ordered before. For example, for _order#1_, four out of eight products were reordered products. 
+
+In **order_dow**, the numbers in the column show the day of the week on which the order was placed. As information about the start day of the week is not shown, we assume the first day of the week is Sunday, which means 0 represents Sunday. 
+
+__2.2__ (comment on each result)
 
 How many aisles are there, and which aisles are the most items ordered from?
-Make a plot that shows the number of items ordered in each aisle. Order aisles sensibly, and organize your plot so others can read it. (google around to see if there are other options for x-axis text that will make the figure more readable, or consider other options to include that information.)
+
+```{r aisles count}
+# make table of aisle 
+aisles_data = instacart %>% 
+  select(order_id, product_id, user_id, aisle_id, aisle, department) %>% 
+  group_by(aisle, aisle_id, department) %>% 
+  summarize(items_n = n()) %>% 
+  arrange(desc(items_n)) 
+# count the number of aisles
+n_aisles = nrow(aisles_data)
+# find aisles that most items ordered from
+aisles_data[1,1]
+```
+
+There are __`r n_aisles`__ aisles and __`r aisles_data[1,1]`__ is the aisle which the most items ordered from.
+
+__2.3__
+
+Make a plot that shows the number of items ordered in each aisle. Order aisles sensibly, and organize your plot so others can read it. 
+
+```{r aisles plot}
+# arrange data for the plot
+aisles_plot = instacart %>% 
+  select(aisle_id, aisle) %>% 
+  group_by(aisle) %>% 
+  summarize(items_n = n()) %>% 
+  mutate(items_n, items_n = items_n/1000) 
+# make the plot
+aisles_plot %>% 
+  ggplot(aes(x = aisle, y = items_n, color = aisle)) + # set the axis
+  geom_point(aes(size = items_n)) + 
+  labs(title = "The Number of Items in Each Aisle",
+       x = "Aisle",
+       y = "Number of Items (x1000)",
+       caption = "The size of point reflects the number of items in each aisle.") +
+  #scale_x_discrete(expand = expand_scale(add = 4)) +
+  theme_bw() +
+  theme(text = element_text(size = 10), plot.title = element_text(hjust = 0.5), legend.position = "hide", axis.text.x = element_text(angle = 90, hjust = 1)) 
+```
+
+As the number of each item range from 287 to 150609, the number was divided by 1000 in order to make the plot looks clear. Also, differentiate the number by the size of point make it more easy to notice the aisle with large nubmer. 
+
+__2.4__
+
 Make a table showing the most popular item in each of the aisles “baking ingredients”, “dog food care”, and “packaged vegetables fruits”. -- one table, showing one item from each of these three aisles.
 
+```{r popular item}
+# count the buying times of each product
+popitem = instacart %>% 
+  filter(aisle == "baking ingredients" | aisle == "dog food care" | aisle == "packaged vegetables fruits") %>% 
+  group_by(aisle, product_name) %>% 
+  summarize(times = n()) 
+# fine most popular in each aisle
+baking = popitem %>% 
+  filter(aisle == "baking ingredients") %>% 
+  arrange(desc(times)) 
+  
+dfc = popitem %>% 
+  filter(aisle == "dog food care") %>% 
+  arrange(desc(times)) 
 
+pkvege = popitem %>% 
+  filter(aisle == "packaged vegetables fruits") %>% 
+  arrange(desc(times))
+
+# create table
+rbind(baking[1,], dfc[1,], pkvege[1,])
+```
+The most popular item in baking ingredients is __Light Brown Sugar__. 
+
+The most popular item in dog food care is __Snack Sticks Chicken & Rice Recipe Dog Treats__.
+
+The most popular item in packaged vegetables fruits is __Organic Baby Spinach__.
+
+__2.5__
 Make a table showing the mean hour of the day at which Pink Lady Apples and Coffee Ice Cream are ordered on each day of the week; format this table for human readers (i.e. produce a 2 x 7 table).
 
 
-## Problem 3
+## Problem 3 NY NOAA
 This problem uses the NY NOAA data. DO NOT include this dataset in your local data directory; instead, load the data from the  p8105.datasets package (it’s called ny_noaa).
+
+```{r}
+data(ny_noaa)
+
+```
 
 The goal is to do some exploration of this dataset. To that end, write a short description of the dataset, noting the size and structure of the data, describing some key variables, and indicating the extent to which missing data is an issue.  (obtain proportions of the missing values by column and comment about the degree to which the data is missing, maybe connect to the background of the data)
 Then, do or answer the following (commenting on the results of each):
