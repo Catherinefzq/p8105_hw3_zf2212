@@ -7,7 +7,7 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(
-  fig.width = 6,
+  fig.width = 10,
   fig.asp = .6,
   out.width = "90%"
 )
@@ -58,7 +58,7 @@ There are three states were observed at 7 locations, including __CT, FL and NC._
 
 Make a “spaghetti plot” that shows the number of locations in each state from 2002 to 2010.
 
-```{r spaghetti plot, fig.width = 10,fig.height = 11}
+```{r spaghetti plot}
 # arrange the data
 brfss_nloc = brfss %>%
   group_by(year, locationabbr) %>% 
@@ -100,7 +100,7 @@ brfss_ny
 
 For each year and state, compute the average proportion in each response category (taking the average across locations in a state). Make a five-panel plot that shows, for each response category separately, the distribution of these state-level averages over time. 
 (five-panel plot -  facet_grid() )
-```{r five panel plot, fig.width = 10,fig.height = 11}
+```{r five panel plot}
 # arrange the data 
 brfss_average = brfss %>% 
   group_by(year, locationabbr) %>% 
